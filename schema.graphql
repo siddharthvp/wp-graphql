@@ -1,0 +1,81 @@
+scalar JSONObject
+scalar Timestamp
+
+type Page {
+    id: Int
+    title: String
+    isRedirect: Boolean
+    length: Int
+    description: String
+    categories: [String]
+    templates: [String]
+    links: [String]
+    images: [String]
+    externalLinks: [String]
+    langlinks: [String]
+    iwlinks: [String]
+    pageprops: JSONObject
+    backlinks: [String]
+    transclusions: [String]
+    redirects: [String]
+    fileUsage: [String]
+    talkPage: Page
+    subjectPage: Page
+    lastRevision: Revision
+    revisions(limit: Int = 10): [Revision]
+}
+
+type Revision {
+    id: Int!
+    summary: String
+    timestamp: Timestamp
+    length: Int
+    user: User
+    parent: Revision
+    sha1: String
+    isMinor: Boolean
+    tags: [String]
+}
+
+type Category {
+    id: Int
+    title: String
+    pages: [String] # [Page] ?
+    subcats: [String]
+    files: [String]
+}
+
+type User {
+    id: Int
+    name: String
+    registration: String
+    editcount: Int
+    groups: [UserGroup]
+    rights: [String]
+    userPage: Page
+    contributions: [UserContribution]
+    logs: [LogAction]
+}
+
+type UserContribution {
+    page: Page
+    timestamp: Timestamp
+}
+
+type LogAction {
+    page: Page
+    timestamp: Timestamp
+}
+
+type UserGroup {
+    name: String
+    expiry: String
+}
+
+type Query {
+    page(title: String, id: Int): Page
+    pages(titles: [String], ids: [Int]): [Page]
+    users(ids: [Int], names: [String]): User
+    category(title: String): Category
+    revisions(ids: [Int]!): Revision
+}

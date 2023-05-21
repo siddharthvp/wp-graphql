@@ -1,0 +1,35 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: tf-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: garygrossgarten/github-action-ssh@915e492551885a89131e21d85f2e043c96abff80
+        with:
+          command: >-
+            become wp-graphql bash -c '
+              set -eo pipefail;
+              cd $HOME/wp-graphql;
+              echo "Pulling git repo ...";
+              git checkout main;
+              git pull --ff-only;
+              if [[ "$(git diff --name-only HEAD HEAD@{1} | grep -c package.json)" -gt 0 ]]; then
+                echo "Running npm install ...";
+                npm install;
+              fi;
+              npm restart;
+            '
+          host: login.toolforge.org
+          username: ${{ secrets.TOOLFORGE_USERNAME }}
+          privateKey: ${{ secrets.TOOLFORGE_PRIVATE_KEY }}
