@@ -4,7 +4,8 @@
   "description": "GraphQL API for Wikipedia via Toolforge db",
   "main": "src/server.ts",
   "scripts": {
-    "start": "ts-node src/server.ts",
+    "start": "NODE_ENV=production ts-node src/server.ts",
+    "debug": "ts-node src/server.ts",
     "test": "nodemon src/server.ts",
     "build": "tsc",
     "restart": "webservice --backend kubernetes node16 restart"

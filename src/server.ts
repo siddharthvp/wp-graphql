@@ -8,6 +8,10 @@ import {mw} from "./mw";
 import bodyParser from 'body-parser';
 import loaders from "./loaders";
 import {ContextValue} from "./types";
+import {
+    ApolloServerPluginLandingPageLocalDefault,
+    ApolloServerPluginLandingPageProductionDefault
+} from "@apollo/server/plugin/landingPage/default";
 
 (async function () {
 
@@ -17,13 +21,28 @@ import {ContextValue} from "./types";
 
     const typeDefs = (await fs.readFile(__dirname + '/../schema.graphql')).toString();
 
-    await mw.getSiteInfo();
-
     const server = new ApolloServer<ContextValue>({
         typeDefs,
         resolvers,
+        introspection: true,
+        plugins: [
+            process.env.NODE_ENV === 'production'
+                ? ApolloServerPluginLandingPageProductionDefault({
+                    footer: false,
+                    // graphRef: 'my-graph-id@my-graph-variant',
+                    // embed: {
+                    //     runTelemetry: false,
+                    //     persistExplorerState: true
+                    // }
+                })
+                : ApolloServerPluginLandingPageLocalDefault(),
+        ],
     });
-    await server.start();
+
+    await Promise.all([
+        mw.getSiteInfo(),
+        server.start(),
+    ]);
 
     app.use(expressMiddleware(server, {
         context: async () => {
