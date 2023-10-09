@@ -7,6 +7,7 @@ import {db} from "../db";
 export const Page: IResolvers<T_page, ContextValue> = {
     id: pg => pg.page_id,
     title: pg => new mw.title(pg.page_title, pg.page_namespace).toText(),
+    namespace: pg => pg.page_namespace,
     isRedirect: pg => Boolean(pg.page_is_redirect),
     length: pg => pg.page_len,
     description: async (pg, _, ctx) => {

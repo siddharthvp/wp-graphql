@@ -21,7 +21,7 @@ export interface T_page {
 
 export interface T_revision {
     rev_id: number
-    rev_page: string
+    rev_page: number
     rev_comment_id: number
     rev_actor: number
     rev_timestamp: MWTimestamp
@@ -32,7 +32,23 @@ export interface T_revision {
     rev_sha1: string
 }
 
+export interface T_logging {
+    log_id: number
+    log_type: string
+    log_action: string
+    log_timestamp: MWTimestamp
+    log_actor: number
+    log_namespace: number
+    log_title: string
+    log_comment_id: number
+    log_params: string
+    log_deleted: number
+    log_page: number
+}
+
 export interface T_user {
+    actorId?: number;
+
     user_id: number
     user_name: string
     user_real_name: string

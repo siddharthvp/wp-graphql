@@ -3,7 +3,7 @@ import cors from 'cors';
 import * as fs from "fs/promises";
 import {ApolloServer} from "@apollo/server";
 import {expressMiddleware} from '@apollo/server/express4';
-import resolvers from "./resolvers/index";
+import resolvers from "./resolvers";
 import {mw} from "./mw";
 import bodyParser from 'body-parser';
 import loaders from "./loaders";

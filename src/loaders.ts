@@ -120,4 +120,12 @@ export default {
         `, names);
         return resort(names, cats, c => c.cat_title);
     }),
+
+    actorByUserId: new DataLoader<number, number>(async ids => {
+        let actors = await db.query(`
+            SELECT * FROM actor WHERE actor_user IN (${nQuestionMarks(ids.length)})
+        `, ids);
+        return resort(ids, actors, a => a.actor_user).map(a => a.actor_id);
+    }),
+
 }
