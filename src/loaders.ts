@@ -91,7 +91,14 @@ export default {
 
     tagNames: new DataLoader<number, string>(async ids => {
         let tags = await db.query(`SELECT ctd_id, ctd_name FROM change_tag_def
-            WHERE ctd_id IN ${nQuestionMarks(ids.length)} `, ids);
+            WHERE ctd_id IN (${nQuestionMarks(ids.length)}) `, ids);
         return resort(ids, tags, t => t.ctd_id).map(id => id.map(t => t.ctd_name));
+    }),
+
+    categories: new DataLoader<string, string[]>(async names => {
+        let cats = await db.query(`
+            SELECT * FROM category WHERE cat_title IN (${nQuestionMarks(names.length)})
+        `, names);
+        return resort(names, cats, c => c.cat_title);
     }),
 }

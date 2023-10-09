@@ -58,3 +58,11 @@ export interface T_user_groups {
     ug_group: string
     ug_expiry: MWTimestamp
 }
+
+export interface T_category {
+    cat_id: number
+    cat_title: string
+    cat_pages: number
+    cat_subcats: number
+    cat_files: number
+}

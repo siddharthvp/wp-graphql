@@ -37,12 +37,17 @@ type Revision {
     tags: [String]
 }
 
+type CategoryCounts {
+    total: Int
+    pages: Int
+    subcats: Int
+    files: Int
+}
+
 type Category {
     id: Int
     title: String
-    pages: [String] # [Page] ?
-    subcats: [String]
-    files: [String]
+    counts: CategoryCounts
 }
 
 type User {
@@ -73,9 +78,8 @@ type UserGroup {
 }
 
 type Query {
-    page(title: String, id: Int): Page
     pages(titles: [String], ids: [Int]): [Page]
-    users(ids: [Int], names: [String]): User
-    category(title: String): Category
-    revisions(ids: [Int]!): Revision
+    users(ids: [Int], names: [String]): [User]
+    categories(names: [String]): [Category]
+    revisions(ids: [Int]!): [Revision]
 }

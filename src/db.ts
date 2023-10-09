@@ -66,8 +66,8 @@ abstract class Db {
      * @returns array of objects - each object represents a row
      */
     async query(...args: any[]): Promise<Array<Record<string, string | number | null>>> {
+        console.log(args[0].replace(/\s+/g, ' ').trim());
         let conn = await this.getConnection();
-        console.log(args[0]);
         const result = await conn.query(...args).finally(() => {
             conn.release();
         });
