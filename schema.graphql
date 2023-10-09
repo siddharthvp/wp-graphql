@@ -7,22 +7,27 @@ type Page {
     isRedirect: Boolean
     length: Int
     description: String
-    categories: [String]
-    templates: [String]
-    links: [String]
-    images: [String]
-    externalLinks: [String]
+    categories(limit: Int = 10): [Page]
+    templates(limit: Int = 10): [Page]
+    links(limit: Int = 10): [Page]
+    images(limit: Int = 10): [Page]
+    externalLinks(limit: Int = 10): [ExternalLink]
     langlinks: [String]
     iwlinks: [String]
     pageprops: JSONObject
-    backlinks: [String]
-    transclusions: [String]
-    redirects: [String]
-    fileUsage: [String]
+    backlinks(limit: Int = 10): [Page]
+    transclusions(limit: Int = 10): [Page]
+    redirects(limit: Int = 10): [Page]
+    fileUsage(limit: Int = 10): [Page]
     talkPage: Page
     subjectPage: Page
     lastRevision: Revision
     revisions(limit: Int = 10): [Revision]
+}
+
+type ExternalLink {
+    domainIndex: String
+    path: String
 }
 
 type Revision {

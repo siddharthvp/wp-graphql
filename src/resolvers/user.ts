@@ -1,5 +1,7 @@
 import {IResolvers} from "@graphql-tools/utils";
 import {ContextValue, T_user} from "../types";
+import {onlyTitleRequested} from "./utils";
+import {NS_USER} from "../mw";
 
 export const User: IResolvers<T_user, ContextValue> = {
     id: u => u.user_id,
@@ -13,7 +15,10 @@ export const User: IResolvers<T_user, ContextValue> = {
             expiry: g.ug_expiry
         }))
     },
-    userPage: async (u, _, ctx) => {
+    userPage: async (u, _, ctx, info) => {
+        if (onlyTitleRequested(info)) {
+            return { page_namespace: NS_USER, page_title: u.user_name.replace(/ /g, '_') };
+        }
         return ctx.pagesByName.load('User:' + u.user_name);
     }
 };

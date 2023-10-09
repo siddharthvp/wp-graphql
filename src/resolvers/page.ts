@@ -1,5 +1,5 @@
 import {IResolvers} from "@graphql-tools/utils";
-import {onlyIdRequested} from "./utils";
+import {onlyIdRequested, onlyTitleRequested} from "./utils";
 import {ContextValue, T_page} from "../types";
 import {mw, NS_CATEGORY, NS_FILE} from "../mw";
 import {db} from "../db";
@@ -12,42 +12,64 @@ export const Page: IResolvers<T_page, ContextValue> = {
     description: async (pg, _, ctx) => {
         return ctx.descriptions.load(pg.page_id);
     },
-    categories: async pg => {
+    categories: async (pg, args, ctx, info) => {
         let categories = await db.query(`
                 SELECT cl_to FROM categorylinks
                 WHERE cl_from = ?
-            `, [pg.page_id]);
-        return categories.map(c => mw.title.newFromText(c.cl_to as string, NS_CATEGORY)?.toText());
+                LIMIT ?
+            `, [pg.page_id, args.limit]);
+        if (onlyTitleRequested(info)) {
+            return categories.map(c => ({ page_title: c.cl_to, page_namespace: NS_CATEGORY }));
+        }
+        let titles = categories.map(c => mw.title.newFromText(c.cl_to as string, NS_CATEGORY)?.toText());
+        return ctx.pagesByName.loadMany(titles);
     },
-    templates: async pg => {
+    templates: async (pg, args, ctx, info) => {
         let templates = await db.query(`
                 SELECT lt_namespace, lt_title FROM templatelinks
                 LEFT JOIN linktarget ON lt_id = tl_target_id
                 WHERE tl_from = ?
-            `, [pg.page_id]);
-        return templates.map(t => mw.title.newFromText(t.lt_title as string, t.lt_namespace as number)?.toText())
+                LIMIT ?
+            `, [pg.page_id, args.limit]);
+
+        if (onlyTitleRequested(info)) {
+            return templates.map(t => ({ page_title: t.lt_title, page_namespace: t.lt_namespace }));
+        }
+        let titles = templates.map(t => mw.title.newFromText(t.lt_title as string, t.lt_namespace as number)?.toText());
+        return ctx.pagesByName.loadMany(titles)
     },
-    links: async pg => {
+    links: async (pg, args, ctx, info) => {
         let links = await db.query(`
             SELECT pl_namespace, pl_title FROM pagelinks
             WHERE pl_from = ?
-        `, [pg.page_id]);
-        return links.map(r => mw.title.makeTitle(r.pl_namespace as number, r.pl_title as string)
+            LIMIT ?
+        `, [pg.page_id, args.limit]);
+        if (onlyTitleRequested(info)) {
+            return links.map(l => ({ page_title: l.pl_title, page_namespace: l.pl_namespace }));
+        }
+        let titles = links.map(l => mw.title.makeTitle(l.pl_namespace as number, l.pl_title as string)
             .toText());
+        return ctx.pagesByName.loadMany(titles);
     },
-    images: async pg => {
+    images: async (pg, args, ctx, info) => {
         let images = await db.query(`
             SELECT il_to FROM imagelinks
             WHERE il_from = ?
-        `, [pg.page_id]);
-        return images.map(r => mw.title.makeTitle(NS_FILE, r.il_to as string).toText());
+            LIMIT ?
+        `, [pg.page_id, args.limit]);
+        if (onlyTitleRequested(info)) {
+            return images.map(i => ({ page_title: i.il_to, page_namespace: NS_FILE }));
+        }
+        let titles = images.map(r => mw.title.makeTitle(NS_FILE, r.il_to as string).toText());
+        return ctx.pagesByName.loadMany(titles);
     },
-    externalLinks: async pg => {
+    externalLinks: async (pg, args) => {
         let links = await db.query(`
-            SELECT el_to FROM externallinks
+            SELECT el_to_domain_index, el_to_path FROM externallinks
             WHERE el_from = ?
-        `, [pg.page_id]);
-        return links.map(r => r.el_to);
+            LIMIT ?
+        `, [pg.page_id, args.limit]);
+        return links.map(r => ({ domainIndex: r.el_to_domain_index, path: r.el_to_path }));
     },
     langlinks: async pg => {
         let langlinks = await db.query(`
@@ -70,53 +92,53 @@ export const Page: IResolvers<T_page, ContextValue> = {
         `, [pg.page_id]);
         return Object.fromEntries(props.map(r => [r.pp_propname, r.pp_value]));
     },
-    backlinks: async (pg, _, ctx) => {
+    backlinks: async (pg, args, ctx, info) => {
         let backlinks = await db.query(`
             SELECT * FROM pagelinks
             WHERE pl_namespace = ? AND pl_title = ?
-        `, [pg.page_namespace, pg.page_title]);
-        let ids = backlinks.map(r => r.rd_from) as number[];
-        let pages = await ctx.pagesById.loadMany(ids);
-        return pages.map(r => {
-            if (r instanceof Error) return null;
-            return mw.title.makeTitle(r.page_namespace as number, r.page_title as string).toText();
-        });
+            LIMIT ?
+        `, [pg.page_namespace, pg.page_title, args.limit]);
+        if (onlyIdRequested(info)) {
+            return backlinks.map(i => ({ page_id: i.pl_from }));
+        }
+        let ids = backlinks.map(p => p.pl_from) as number[];
+        return await ctx.pagesById.loadMany(ids);
     },
-    transclusions: async (pg, _, ctx) => {
+    transclusions: async (pg, args, ctx, info) => {
         let transclusions = await db.query(`
             SELECT * FROM templatelinks
             WHERE tl_target_id = (SELECT * FROM linktarget WHERE lt_namespace = ? AND lt_title = ?)
-        `, [pg.page_namespace, pg.page_title]);
-        let ids = transclusions.map(r => r.rd_from) as number[];
-        let pages = await ctx.pagesById.loadMany(ids);
-        return pages.map(r => {
-            if (r instanceof Error) return null;
-            return mw.title.makeTitle(r.page_namespace as number, r.page_title as string).toText();
-        });
+            LIMIT ?
+        `, [pg.page_namespace, pg.page_title, args.limit]);
+        if (onlyIdRequested(info)) {
+            return transclusions.map(i => ({ page_id: i.tl_from }));
+        }
+        let ids = transclusions.map(t => t.tl_from) as number[];
+        return ctx.pagesById.loadMany(ids);
     },
-    redirects: async (pg, _, ctx) => {
+    redirects: async (pg, args, ctx, info) => {
         let redirects = await db.query(`
             SELECT * FROM redirect
             WHERE rd_namespace = ? AND rd_title = ?
-        `, [pg.page_namespace, pg.page_title]);
+            LIMIT ?
+        `, [pg.page_namespace, pg.page_title, args.limit]);
+        if (onlyIdRequested(info)) {
+            return redirects.map(i => ({ page_id: i.rd_from }));
+        }
         let ids = redirects.map(r => r.rd_from) as number[];
-        let pages = await ctx.pagesById.loadMany(ids);
-        return pages.map(r => {
-            if (r instanceof Error) return null;
-            return mw.title.makeTitle(r.page_namespace as number, r.page_title as string).toText();
-        });
+        return ctx.pagesById.loadMany(ids);
     },
-    fileUsage: async (pg, _, ctx) => {
+    fileUsage: async (pg, args, ctx, info) => {
         let imagelinks = await db.query(`
             SELECT * FROM imagelinks
             WHERE il_to = ?
-        `, [pg.page_title]);
-        let ids = imagelinks.map(r => r.rd_from) as number[];
-        let pages = await ctx.pagesById.loadMany(ids);
-        return pages.map(r => {
-            if (r instanceof Error) return null;
-            return mw.title.makeTitle(r.page_namespace as number, r.page_title as string).toText();
-        });
+            LIMIT ?
+        `, [pg.page_title, args.limit]);
+        if (onlyIdRequested(info)) {
+            return imagelinks.map(i => ({ page_id: i.il_from }));
+        }
+        let ids = imagelinks.map(r => r.il_from) as number[];
+        return ctx.pagesById.loadMany(ids);
     },
     talkPage: async (pg, _, ctx) => {
         let title = mw.title.makeTitle(pg.page_namespace, pg.page_title).getTalkPage();
@@ -132,7 +154,12 @@ export const Page: IResolvers<T_page, ContextValue> = {
         }
         return ctx.revisions.load(pg.page_latest);
     },
-    revisions: async pg => {
-
+    revisions: async (pg, args) => {
+        return db.query(`
+            SELECT * FROM revision 
+            WHERE rev_page = ?
+            ORDER BY rev_timestamp DESC
+            LIMIT ?
+        `, [pg.page_id, args.limit]);
     },
 };
