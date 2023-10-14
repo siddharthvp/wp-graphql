@@ -1,4 +1,4 @@
-import loaders from "./loaders";
+import * as loaders from "./loaders";
 
 export type ContextValue = typeof loaders;
 
