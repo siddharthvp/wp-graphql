@@ -1,38 +1,10 @@
 import DataLoader from "dataloader";
 import {db} from "./db";
-import {Title} from "./title";
 import {nQuestionMarks} from "./utils";
-import {mw} from "./mw";
 import {T_actor, T_page, T_revision, T_user, T_user_groups} from "./types";
 import {GraphQLResolveInfo} from "graphql/type";
-import {onlyFieldsRequested} from "./resolvers/utils";
-
-/** One-to-one resorting */
-function resort(keys, records, recordToKey) {
-    let mapping = new Map();
-    records.forEach(r => mapping.set(recordToKey(r), r));
-    return keys.map(key => mapping.get(key));
-}
-
-/** One-to-many resorting */
-function resortMultiple(keys, records, recordToKey) {
-    let mapping = new Map();
-    records.forEach(r => {
-        let key = recordToKey(r);
-        mapping.set(key, (mapping.get(key) || []).concat(r));
-    });
-    return keys.map(key => mapping.get(key));
-}
-
-/**
- * Avoid making a database query if only the key field is requested, which is already available.
- */
-function optimise<K, V>(keyField: string, dbKeyField: string, info: GraphQLResolveInfo, loader: DataLoader<K, V>) {
-    return {
-        load: (key: K) => onlyFieldsRequested(info, [keyField]) ? { [dbKeyField]: key } : loader.load(key),
-        loadMany: (keys: K[]) => onlyFieldsRequested(info, [keyField]) ? { [dbKeyField]: keys } : loader.loadMany(keys),
-    }
-}
+import {Title} from "./title";
+import {optimise, optimiseMulti, resort, resortMultiple} from "./loader-utils";
 
 export const descriptions = new DataLoader<number, string>(async ids => {
     const descriptions = await db.query(`
@@ -69,14 +41,16 @@ export const pagesById = (info: GraphQLResolveInfo) =>
         return resort(ids, pages, p => p.page_id);
     }));
 
-export const pagesByTitle = new DataLoader<Title, T_page>(async titles => {
-    let pages = await db.query(`
-        SELECT * FROM page
-        WHERE (page_namespace, page_title) IN (${nQuestionMarks(titles.length, '(?,?)')})
-    `, titles.flatMap(t => [t.namespace, t.name]));
-    return resort(titles.map(t => t.namespace + ':' + t.name), pages,
-        p => p.page_namespace + ':' + p.page_title);
-});
+export const pagesByTitle = (info: GraphQLResolveInfo) =>
+    optimiseMulti<Title, T_page>(['title', 'namespace'], ['page_namespace', 'page_title'], info, new DataLoader(async titles => {
+        let pages = await db.query(`
+            SELECT * FROM page
+            WHERE (page_namespace, page_title) IN (${nQuestionMarks(titles.length, '(?,?)')})
+        `, titles.flatMap(t => [t.namespace, t.name]));
+        return resort(titles.map(t => t.namespace + ':' + t.name), pages,
+            p => p.page_namespace + ':' + p.page_title);
+    }));
+
 
 export const revisions = (info: GraphQLResolveInfo) =>
     optimise<number, T_revision>('id', 'rev_id', info, new DataLoader(async ids => {

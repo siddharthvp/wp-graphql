@@ -1,6 +1,6 @@
 import {IResolvers} from "@graphql-tools/utils";
 import {ContextValue, T_revision} from "../types";
-import {onlyFieldsRequested} from "./utils";
+import {onlyFieldsRequested} from "../loader-utils";
 
 export const Revision: IResolvers<T_revision, ContextValue> = {
     id: r => {
@@ -14,7 +14,7 @@ export const Revision: IResolvers<T_revision, ContextValue> = {
     user: async (r, _, ctx, info) => {
         const actor = await ctx.actors.load(r.rev_actor);
         if (onlyFieldsRequested(info, ['id', 'name']) || !actor.actor_user) {
-            // !actor.actor_user - in case of IPs where there is user_id or further user info
+            // !actor.actor_user - in case of IPs where there is no user_id or further user info
             return {
                 user_id: actor.actor_user,
                 user_name: actor.actor_name

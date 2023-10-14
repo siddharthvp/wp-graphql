@@ -1,6 +1,6 @@
 import {IResolvers} from "@graphql-tools/utils/typings";
 import {ContextValue, T_logging} from "../types";
-import {onlyFieldsRequested} from "./utils";
+import {onlyFieldsRequested} from "../loader-utils";
 
 export const LogAction: IResolvers<T_logging, ContextValue> = {
     id: lg => lg.log_id,

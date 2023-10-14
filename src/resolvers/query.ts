@@ -8,13 +8,10 @@ export const Query: IResolvers<any, ContextValue> = {
         if (args.ids) {
             return ctx.pagesById(info).loadMany(args.ids);
         } else if (args.titles) {
-            let titles = args.titles.map(title => {
-                let mwTitle = mw.Title.newFromText(title);
-                if (mwTitle) {
-                    return new Title(mwTitle.namespace, mwTitle.title);
-                }
-            })
-            return ctx.pagesByTitle.loadMany(titles);
+            let titles = args.titles.map(title =>  mw.Title.newFromText(title))
+                .filter(e => e) // TODO: warning that title is invalid
+                .map(t => new Title(t.namespace, t.title));
+            return ctx.pagesByTitle(info).loadMany(titles);
         } else {
             throw new Error("ids or titles must be specified");
         }
