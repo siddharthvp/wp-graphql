@@ -1,5 +1,6 @@
 import DataLoader from "dataloader";
 import {db} from "./db";
+import {Title} from "./title";
 import {nQuestionMarks} from "./utils";
 import {mw} from "./mw";
 import {T_actor, T_page, T_revision, T_user, T_user_groups} from "./types";
@@ -68,13 +69,12 @@ export const pagesById = (info: GraphQLResolveInfo) =>
         return resort(ids, pages, p => p.page_id);
     }));
 
-export const pagesByName = new DataLoader<string, T_page>(async names => {
-    let titles = names.map(name => mw.title.newFromText(name as string));
+export const pagesByTitle = new DataLoader<Title, T_page>(async titles => {
     let pages = await db.query(`
         SELECT * FROM page
         WHERE (page_namespace, page_title) IN (${nQuestionMarks(titles.length, '(?,?)')})
-    `, titles.flatMap(t => [t.namespace, t.title]));
-    return resort(titles.map(t => t.namespace + ':' + t.title), pages,
+    `, titles.flatMap(t => [t.namespace, t.name]));
+    return resort(titles.map(t => t.namespace + ':' + t.name), pages,
         p => p.page_namespace + ':' + p.page_title);
 });
 

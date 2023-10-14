@@ -3,6 +3,7 @@ import {onlyTitleRequested} from "./utils";
 import {ContextValue, T_page} from "../types";
 import {mw, NS_CATEGORY, NS_FILE} from "../mw";
 import {db} from "../db";
+import {Title} from "../title";
 
 export const Page: IResolvers<T_page, ContextValue> = {
     id: pg => pg.page_id,
@@ -22,8 +23,8 @@ export const Page: IResolvers<T_page, ContextValue> = {
         if (onlyTitleRequested(info)) {
             return categories.map(c => ({ page_title: c.cl_to, page_namespace: NS_CATEGORY }));
         }
-        let titles = categories.map(c => mw.title.newFromText(c.cl_to as string, NS_CATEGORY)?.toText());
-        return ctx.pagesByName.loadMany(titles);
+        let titles = categories.map(c => new Title(NS_CATEGORY, c.cl_to as string));
+        return ctx.pagesByTitle.loadMany(titles);
     },
     templates: async (pg, args, ctx, info) => {
         let templates = await db.query(`
@@ -36,8 +37,8 @@ export const Page: IResolvers<T_page, ContextValue> = {
         if (onlyTitleRequested(info)) {
             return templates.map(t => ({ page_title: t.lt_title, page_namespace: t.lt_namespace }));
         }
-        let titles = templates.map(t => mw.title.newFromText(t.lt_title as string, t.lt_namespace as number)?.toText());
-        return ctx.pagesByName.loadMany(titles)
+        let titles = templates.map(t => new Title(t.lt_namespace as number, t.lt_title as string));
+        return ctx.pagesByTitle.loadMany(titles)
     },
     links: async (pg, args, ctx, info) => {
         let links = await db.query(`
@@ -48,9 +49,8 @@ export const Page: IResolvers<T_page, ContextValue> = {
         if (onlyTitleRequested(info)) {
             return links.map(l => ({ page_title: l.pl_title, page_namespace: l.pl_namespace }));
         }
-        let titles = links.map(l => mw.title.makeTitle(l.pl_namespace as number, l.pl_title as string)
-            .toText());
-        return ctx.pagesByName.loadMany(titles);
+        let titles = links.map(l => new Title(l.pl_namespace as number, l.pl_title as string));
+        return ctx.pagesByTitle.loadMany(titles);
     },
     images: async (pg, args, ctx, info) => {
         let images = await db.query(`
@@ -61,8 +61,8 @@ export const Page: IResolvers<T_page, ContextValue> = {
         if (onlyTitleRequested(info)) {
             return images.map(i => ({ page_title: i.il_to, page_namespace: NS_FILE }));
         }
-        let titles = images.map(r => mw.title.makeTitle(NS_FILE, r.il_to as string).toText());
-        return ctx.pagesByName.loadMany(titles);
+        let titles = images.map(r => new Title(NS_FILE, r.il_to as string));
+        return ctx.pagesByTitle.loadMany(titles);
     },
     externalLinks: async (pg, args) => {
         let links = await db.query(`
@@ -131,11 +131,11 @@ export const Page: IResolvers<T_page, ContextValue> = {
     },
     talkPage: async (pg, _, ctx) => {
         let title = mw.title.makeTitle(pg.page_namespace, pg.page_title).getTalkPage();
-        return ctx.pagesByName.load(title.toText());
+        return ctx.pagesByTitle.load(new Title(title.namespace, title.title));
     },
     subjectPage: async (pg, _, ctx) => {
         let title = mw.title.makeTitle(pg.page_namespace, pg.page_title).getSubjectPage();
-        return ctx.pagesByName.load(title.toText());
+        return ctx.pagesByTitle.load(new Title(title.namespace, title.title));
     },
     lastRevision: async (pg, _, ctx, info) => {
         return ctx.revisions(info).load(pg.page_latest);

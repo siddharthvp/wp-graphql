@@ -1,12 +1,20 @@
 import {IResolvers} from "@graphql-tools/utils";
 import {ContextValue} from "../types";
+import {mw} from '../mw';
+import {Title} from "../title";
 
 export const Query: IResolvers<any, ContextValue> = {
     async pages(parent, args, ctx, info) {
         if (args.ids) {
             return ctx.pagesById(info).loadMany(args.ids);
         } else if (args.titles) {
-            return ctx.pagesByName.loadMany(args.titles);
+            let titles = args.titles.map(title => {
+                let mwTitle = mw.Title.newFromText(title);
+                if (mwTitle) {
+                    return new Title(mwTitle.namespace, mwTitle.title);
+                }
+            })
+            return ctx.pagesByTitle.loadMany(titles);
         } else {
             throw new Error("ids or titles must be specified");
         }

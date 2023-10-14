@@ -3,6 +3,7 @@ import {ContextValue, T_user} from "../types";
 import {onlyTitleRequested} from "./utils";
 import {NS_USER} from "../mw";
 import {db} from "../db";
+import {Title} from "../title";
 
 export const User: IResolvers<T_user, ContextValue> = {
     id: u => u.user_id,
@@ -20,7 +21,7 @@ export const User: IResolvers<T_user, ContextValue> = {
         if (onlyTitleRequested(info)) {
             return { page_namespace: NS_USER, page_title: u.user_name.replace(/ /g, '_') };
         }
-        return ctx.pagesByName.load('User:' + u.user_name);
+        return ctx.pagesByTitle.load(new Title(NS_USER, u.user_name));
     },
     actorId: async (u, _, ctx) => {
         return u.actorId ?? (await ctx.actorByUserId.load(u.user_id));
