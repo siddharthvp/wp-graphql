@@ -3,6 +3,8 @@ import {db} from "./db";
 import {nQuestionMarks} from "./utils";
 import {mw} from "./mw";
 import {T_actor, T_page, T_revision, T_user, T_user_groups} from "./types";
+import {GraphQLResolveInfo} from "graphql/type";
+import {onlyFieldsRequested} from "./resolvers/utils";
 
 /** One-to-one resorting */
 function resort(keys, records, recordToKey) {
@@ -19,6 +21,16 @@ function resortMultiple(keys, records, recordToKey) {
         mapping.set(key, (mapping.get(key) || []).concat(r));
     });
     return keys.map(key => mapping.get(key));
+}
+
+/**
+ * Avoid making a database query if only the key field is requested, which is already available.
+ */
+function optimise<K, V>(keyField: string, dbKeyField: string, info: GraphQLResolveInfo, loader: DataLoader<K, V>) {
+    return {
+        load: (key: K) => onlyFieldsRequested(info, [keyField]) ? { [dbKeyField]: key } : loader.load(key),
+        loadMany: (keys: K[]) => onlyFieldsRequested(info, [keyField]) ? { [dbKeyField]: keys } : loader.loadMany(keys),
+    }
 }
 
 export const descriptions = new DataLoader<number, string>(async ids => {
@@ -47,13 +59,14 @@ export const usersByName = new DataLoader<string, T_user>(async names => {
     return resort(names, users, u => u.user_name);
 });
 
-export const pagesById = new DataLoader<number, T_page>(async ids => {
-    let pages = await db.query(`
-        SELECT * FROM page
-        WHERE page_id IN (${nQuestionMarks(ids.length)})
-    `, ids);
-    return resort(ids, pages, p => p.page_id);
-});
+export const pagesById = (info: GraphQLResolveInfo) =>
+    optimise<number, T_page>('id', 'page_id', info, new DataLoader(async ids => {
+        let pages = await db.query(`
+            SELECT * FROM page
+            WHERE page_id IN (${nQuestionMarks(ids.length)})
+        `, ids);
+        return resort(ids, pages, p => p.page_id);
+    }));
 
 export const pagesByName = new DataLoader<string, T_page>(async names => {
     let titles = names.map(name => mw.title.newFromText(name as string));
@@ -65,13 +78,14 @@ export const pagesByName = new DataLoader<string, T_page>(async names => {
         p => p.page_namespace + ':' + p.page_title);
 });
 
-export const revisions = new DataLoader<number, T_revision>(async ids => {
-    const revs = await db.query(`
-        SELECT * FROM revision
-        WHERE rev_id IN (${nQuestionMarks(ids.length)})
-    `, ids);
-    return resort(ids, revs, r => r.rev_id);
-});
+export const revisions = (info: GraphQLResolveInfo) =>
+    optimise<number, T_revision>('id', 'rev_id', info, new DataLoader(async ids => {
+        const revs = await db.query(`
+            SELECT * FROM revision
+            WHERE rev_id IN (${nQuestionMarks(ids.length)})
+        `, ids);
+        return resort(ids, revs, r => r.rev_id);
+    }));
 
 export const comments = new DataLoader<number, string>(async ids => {
     let comments = await db.query(`

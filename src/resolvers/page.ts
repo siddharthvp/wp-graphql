@@ -1,5 +1,5 @@
 import {IResolvers} from "@graphql-tools/utils";
-import {onlyIdRequested, onlyTitleRequested} from "./utils";
+import {onlyTitleRequested} from "./utils";
 import {ContextValue, T_page} from "../types";
 import {mw, NS_CATEGORY, NS_FILE} from "../mw";
 import {db} from "../db";
@@ -99,11 +99,8 @@ export const Page: IResolvers<T_page, ContextValue> = {
             WHERE pl_namespace = ? AND pl_title = ?
             LIMIT ?
         `, [pg.page_namespace, pg.page_title, args.limit]);
-        if (onlyIdRequested(info)) {
-            return backlinks.map(i => ({ page_id: i.pl_from }));
-        }
         let ids = backlinks.map(p => p.pl_from) as number[];
-        return await ctx.pagesById.loadMany(ids);
+        return ctx.pagesById(info).loadMany(ids);
     },
     transclusions: async (pg, args, ctx, info) => {
         let transclusions = await db.query(`
@@ -111,11 +108,8 @@ export const Page: IResolvers<T_page, ContextValue> = {
             WHERE tl_target_id = (SELECT * FROM linktarget WHERE lt_namespace = ? AND lt_title = ?)
             LIMIT ?
         `, [pg.page_namespace, pg.page_title, args.limit]);
-        if (onlyIdRequested(info)) {
-            return transclusions.map(i => ({ page_id: i.tl_from }));
-        }
         let ids = transclusions.map(t => t.tl_from) as number[];
-        return ctx.pagesById.loadMany(ids);
+        return ctx.pagesById(info).loadMany(ids);
     },
     redirects: async (pg, args, ctx, info) => {
         let redirects = await db.query(`
@@ -123,11 +117,8 @@ export const Page: IResolvers<T_page, ContextValue> = {
             WHERE rd_namespace = ? AND rd_title = ?
             LIMIT ?
         `, [pg.page_namespace, pg.page_title, args.limit]);
-        if (onlyIdRequested(info)) {
-            return redirects.map(i => ({ page_id: i.rd_from }));
-        }
         let ids = redirects.map(r => r.rd_from) as number[];
-        return ctx.pagesById.loadMany(ids);
+        return ctx.pagesById(info).loadMany(ids);
     },
     fileUsage: async (pg, args, ctx, info) => {
         let imagelinks = await db.query(`
@@ -135,11 +126,8 @@ export const Page: IResolvers<T_page, ContextValue> = {
             WHERE il_to = ?
             LIMIT ?
         `, [pg.page_title, args.limit]);
-        if (onlyIdRequested(info)) {
-            return imagelinks.map(i => ({ page_id: i.il_from }));
-        }
         let ids = imagelinks.map(r => r.il_from) as number[];
-        return ctx.pagesById.loadMany(ids);
+        return ctx.pagesById(info).loadMany(ids);
     },
     talkPage: async (pg, _, ctx) => {
         let title = mw.title.makeTitle(pg.page_namespace, pg.page_title).getTalkPage();
@@ -150,10 +138,7 @@ export const Page: IResolvers<T_page, ContextValue> = {
         return ctx.pagesByName.load(title.toText());
     },
     lastRevision: async (pg, _, ctx, info) => {
-        if (onlyIdRequested(info)) {
-            return {rev_id: pg.page_latest};
-        }
-        return ctx.revisions.load(pg.page_latest);
+        return ctx.revisions(info).load(pg.page_latest);
     },
     revisions: async (pg, args) => {
         return db.query(`

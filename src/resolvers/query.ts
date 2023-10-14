@@ -2,9 +2,9 @@ import {IResolvers} from "@graphql-tools/utils";
 import {ContextValue} from "../types";
 
 export const Query: IResolvers<any, ContextValue> = {
-    async pages(parent, args, ctx) {
+    async pages(parent, args, ctx, info) {
         if (args.ids) {
-            return ctx.pagesById.loadMany(args.ids);
+            return ctx.pagesById(info).loadMany(args.ids);
         } else if (args.titles) {
             return ctx.pagesByName.loadMany(args.titles);
         } else {
@@ -22,12 +22,12 @@ export const Query: IResolvers<any, ContextValue> = {
         }
     },
 
-    async revisions(parent, args, ctx) {
-        return ctx.revisions.loadMany(args.ids);
+    async revisions(parent, args, ctx, info) {
+        return ctx.revisions(info).loadMany(args.ids);
     },
 
     async categories(parent, args, ctx) {
-        return ctx.categories.loadMany(args.names)
+        return ctx.categories.loadMany(args.names);
     }
 
 }

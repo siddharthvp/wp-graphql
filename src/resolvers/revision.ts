@@ -1,6 +1,6 @@
 import {IResolvers} from "@graphql-tools/utils";
 import {ContextValue, T_revision} from "../types";
-import {onlyFieldsRequested, onlyIdRequested} from "./utils";
+import {onlyFieldsRequested} from "./utils";
 
 export const Revision: IResolvers<T_revision, ContextValue> = {
     id: r => {
@@ -29,9 +29,6 @@ export const Revision: IResolvers<T_revision, ContextValue> = {
         return await ctx.tagNames.loadMany(revTags);
     },
     page: async (r, _, ctx, info) => {
-        if (onlyIdRequested(info)) {
-            return { page_id: r.rev_page };
-        }
-        return ctx.pagesById.load(r.rev_page);
+        return ctx.pagesById(info).load(r.rev_page);
     },
 };

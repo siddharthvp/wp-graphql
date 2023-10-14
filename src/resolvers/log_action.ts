@@ -26,7 +26,7 @@ export const LogAction: IResolvers<T_logging, ContextValue> = {
                 page_title: lg.log_title
             };
         }
-        return ctx.pagesById.load(lg.log_page);
+        return ctx.pagesById(info).load(lg.log_page);
     },
     comment: async (lg, _, ctx, info) => {
         return ctx.comments.load(lg.log_comment_id);

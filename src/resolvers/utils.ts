@@ -1,7 +1,3 @@
-export function onlyIdRequested(info) {
-    return onlyFieldsRequested(info, ['id']);
-}
-
 export function onlyTitleRequested(info) {
     return onlyFieldsRequested(info, ['title']);
 }
