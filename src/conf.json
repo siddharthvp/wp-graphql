@@ -1,0 +1,14 @@
+{
+  "db": {
+    "tunnel": {
+      "host": "127.0.0.1",
+      "port": 4711
+    },
+    "host": "enwiki.analytics.db.svc.wikimedia.cloud",
+    "port": 3306,
+    "database": "enwiki_p",
+    "connectionLimit": 10,
+    "inactiveConnDestroyTimeout": 5,
+    "connRetryDelay": 1
+  }
+}
