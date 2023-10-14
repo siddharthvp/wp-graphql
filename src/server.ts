@@ -26,16 +26,14 @@ import {
         resolvers,
         introspection: true,
         plugins: [
-            process.env.NODE_ENV === 'production'
-                ? ApolloServerPluginLandingPageProductionDefault({
-                    footer: false,
-                    // graphRef: 'my-graph-id@my-graph-variant',
-                    // embed: {
-                    //     runTelemetry: false,
-                    //     persistExplorerState: true
-                    // }
-                })
-                : ApolloServerPluginLandingPageLocalDefault(),
+            ApolloServerPluginLandingPageLocalDefault({
+                embed: {
+                    runTelemetry: false,
+                    initialState: {
+                        pollForSchemaUpdates: process.env.NODE_ENV !== 'production',
+                    }
+                }
+            }),
         ],
     });
 
