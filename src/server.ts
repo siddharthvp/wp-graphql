@@ -1,6 +1,7 @@
 import express from "express";
 import cors from 'cors';
 import * as fs from "fs/promises";
+import * as path from "path";
 import {ApolloServer} from "@apollo/server";
 import {expressMiddleware} from '@apollo/server/express4';
 import resolvers from "./resolvers";
@@ -42,13 +43,15 @@ import {
         server.start(),
     ]);
 
-    app.use(expressMiddleware(server, {
+    app.use('/graphql', expressMiddleware(server, {
         context: async () => {
             return {
                 ...loaders
             }
         }
     }));
+
+    app.use(express.static(path.join(__dirname, '../client')));
 
     const port = parseInt(process.env.PORT || '3000');
 
